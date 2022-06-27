@@ -3,11 +3,10 @@
 Error contains call stack information.
 
 > !Note that there will be some performance loss in obtaining the call stack information.
->
 > Please using `goerror.SetRecordCaller(false)` in a production environment if you have high performance requirements.
 
 ```sh
-go get github.com:mengdu/goerror
+go get github.com/mengdu/goerror
 ```
 
 ```go
