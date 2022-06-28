@@ -8,22 +8,47 @@ import (
 	"sync"
 )
 
-type Stack struct {
+type Stack []uintptr
+
+func (s Stack) Frame() []Frame {
+	f := []Frame{}
+	if len(s) == 0 {
+		return f
+	}
+	frames := runtime.CallersFrames(s)
+	for {
+		frame, more := frames.Next()
+		f = append(f, Frame{Name: frame.Function, File: frame.File, Line: frame.Line})
+		if !more {
+			break
+		}
+	}
+	return f
+}
+
+type Frame struct {
 	File string
-	Line int
 	Name string
+	Line int
 }
 
 type Error struct {
-	stack   []Stack
+	stack   Stack
 	code    int
 	message string
 }
 
 func (e Error) Error() string {
 	strs := []string{fmt.Sprintf("Error(%d): %s", e.code, e.message)}
-	for _, v := range e.stack {
-		strs = append(strs, fmt.Sprintf("  at %s (%s:%d)", v.Name, v.File, v.Line))
+	if len(e.stack) > 0 {
+		frames := runtime.CallersFrames(e.stack)
+		for {
+			frame, more := frames.Next()
+			strs = append(strs, fmt.Sprintf("  at %s (%s:%d)", frame.Function, frame.File, frame.Line))
+			if !more {
+				break
+			}
+		}
 	}
 	return strings.Join(strs, "\n")
 }
@@ -43,15 +68,15 @@ func (e Error) Code() int {
 	return e.code
 }
 
-func (e Error) Stack() []Stack {
-	return e.stack
+func (e Error) Stack() []Frame {
+	return e.stack.Frame()
 }
 
 // New Error include call stack information
 func New(message string) Error {
 	e := Error{message: message}
 	if enableRecordCaller {
-		e.stack = GetCaller()
+		e.stack = callers(3, maxCallerDepth)
 	}
 	return e
 }
@@ -60,7 +85,7 @@ func New(message string) Error {
 func NewWithCode(message string, code int) Error {
 	e := Error{message: message, code: code}
 	if enableRecordCaller {
-		e.stack = GetCaller()
+		e.stack = callers(3, maxCallerDepth)
 	}
 	return e
 }
@@ -81,7 +106,7 @@ func NewPlainWithCode(message string, code int) Error {
 func Wrap(err error) error {
 	e := Error{message: err.Error()}
 	if enableRecordCaller {
-		e.stack = GetCaller()
+		e.stack = callers(3, maxCallerDepth)
 	}
 	return e
 }
@@ -90,7 +115,7 @@ func Wrap(err error) error {
 func WrapWithCode(err error, code int) error {
 	e := Error{message: err.Error(), code: code}
 	if enableRecordCaller {
-		e.stack = GetCaller()
+		e.stack = callers(3, maxCallerDepth)
 	}
 	return e
 }
@@ -100,35 +125,25 @@ var maxCallerDepth = 10
 var once sync.Once
 var enableRecordCaller = true
 
-// Get current func call stack information
-func GetCaller() []Stack {
-	once.Do(func() {
-		_, file, _, _ := runtime.Caller(0)
-		currentPackageName = file
-	})
+func callers(skip int, depth int) []uintptr {
+	pcs := make([]uintptr, depth)
+	n := runtime.Callers(skip, pcs)
+	return pcs[0:n]
+}
 
-	arr := []Stack{}
-	pcs := make([]uintptr, maxCallerDepth)
-	depth := runtime.Callers(1, pcs)
-	frames := runtime.CallersFrames(pcs[:depth])
-	for {
-		frame, more := frames.Next()
-		if frame.File == currentPackageName {
-			continue
-		}
-		arr = append(arr, Stack{
-			File: frame.File,
-			Line: frame.Line,
-			Name: frame.Function,
-		})
-		if !more {
-			break
-		}
-	}
-	return arr
+// Get current func call stack information
+func GetCaller() []Frame {
+	var psc Stack = callers(3, maxCallerDepth)
+	return psc.Frame()
 }
 
 // Set global enable call stack record, default `true`; (Does not affect the `GetCaller` function)
 func SetRecordCaller(enable bool) {
 	enableRecordCaller = enable
+}
+
+// Set call stack length
+func SetMaxCallerDepth(n int) int {
+	maxCallerDepth = n
+	return maxCallerDepth
 }
