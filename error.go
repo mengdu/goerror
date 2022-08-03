@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
-	"sync"
 )
 
 type Stack []uintptr
@@ -104,6 +103,10 @@ func NewPlainWithCode(message string, code int) Error {
 
 // Wrap error to include call stack information
 func Wrap(err error) error {
+	if err == nil {
+		return nil
+	}
+
 	e := Error{message: err.Error()}
 	if enableRecordCaller {
 		e.stack = callers(3, maxCallerDepth)
@@ -120,9 +123,7 @@ func WrapWithCode(err error, code int) error {
 	return e
 }
 
-var currentPackageName = ""
 var maxCallerDepth = 10
-var once sync.Once
 var enableRecordCaller = true
 
 func callers(skip int, depth int) []uintptr {
