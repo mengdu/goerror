@@ -1,72 +1,51 @@
 package goerror
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	"testing"
 )
 
-func TestError(t *testing.T) {
-	err := func() error {
-		return NewWithCode("Unknow Error !", -1)
-	}()
-	fmt.Println(err)
-	v, ok := err.(Error)
-	fmt.Println(v.Message(), ok)
-	bstr, e := json.Marshal(map[string]interface{}{
-		"err": err,
+func BenchmarkStdError(b *testing.B) {
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			func() error {
+				return errors.New("Hello !")
+			}()
+		}
 	})
-	fmt.Println(string(bstr), e)
 }
 
-func TestPlainError(t *testing.T) {
-	err := func() error {
-		return NewPlain("Unknow Error !")
-	}()
-	fmt.Println(err)
-	v, ok := err.(Error)
-	fmt.Println(v.Message(), ok)
-	bstr, e := json.Marshal(map[string]interface{}{
-		"err": err,
+func BenchmarkGoError(b *testing.B) {
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			func() error {
+				return New("Hello !")
+			}()
+		}
 	})
-	fmt.Println(string(bstr), e)
 }
 
-func TestGetCaller(t *testing.T) {
-	frames := GetCaller()
-	fmt.Println(frames)
+func BenchmarkPlainGoError(b *testing.B) {
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			func() error {
+				return NewPlain("Hello !")
+			}()
+		}
+	})
 }
 
-func BenchmarkError1(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		func() error {
-			return errors.New("Hello !")
-		}()
-	}
-}
-
-func BenchmarkError2(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		func() error {
-			return New("Hello !")
-		}()
-	}
-}
-
-func BenchmarkError3(b *testing.B) {
+func BenchmarkGoErrorNoCaller(b *testing.B) {
 	SetRecordCaller(false) // close record call stack
-	for i := 0; i < b.N; i++ {
-		func() error {
-			return New("Hello !")
-		}()
-	}
-}
-
-func BenchmarkError4(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		func() error {
-			return NewPlain("Hello !")
-		}()
-	}
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			func() error {
+				return New("Hello !")
+			}()
+		}
+	})
 }
