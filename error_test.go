@@ -27,17 +27,6 @@ func BenchmarkGoError(b *testing.B) {
 	})
 }
 
-func BenchmarkPlainGoError(b *testing.B) {
-	b.ResetTimer()
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			func() error {
-				return NewPlain("Hello !")
-			}()
-		}
-	})
-}
-
 func BenchmarkGoErrorNoCaller(b *testing.B) {
 	SetRecordCaller(false) // close record call stack
 	b.ResetTimer()

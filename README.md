@@ -2,10 +2,9 @@
 
 Error contains call stack information.
 
-> !Note that there will be some performance loss in obtaining the call stack information.
-> Please using `goerror.SetRecordCaller(false)` in a production environment if you have high performance requirements.
-
-[Docs](https://pkg.go.dev/github.com/mengdu/goerror#section-documentation)
++ `goerror.SetRecordCaller(false)` will disable call stack information. default is true.
++ `goerror.SetMaxCallerDepth(10)` set max call stack depth. default is 10.
++ `goerror.SetJsonWithStack(false)` will disable call stack information in json. default is true.
 
 ```sh
 go get github.com/mengdu/goerror
